@@ -1,6 +1,5 @@
 gc()
 starttime <- Sys.time()
-Sys.setenv(http_proxy="http://niyong:111111yN@isa06:8008/")
 
 ###########################################
 stocklist <- read.table("stocklist.txt", colClasses=c("character"), col.names=c("code"))
@@ -82,10 +81,27 @@ library(foreach)
 library(doParallel)
 n <- nrow(stocklist)
 
-cl <- makeCluster(50)
+cl <- makeCluster(40)
 registerDoParallel(cl)
 result <- foreach(j=1:n, .combine="rbind", .errorhandling="remove") %dopar% getstock(stocklist, j)
 stopCluster(cl)
 filename <- paste("stocklist_", Sys.Date(), ".csv", sep="")
 write.csv(result, filename)
 print(Sys.time()-starttime)
+
+
+#############################################
+recommend <- result[which(as.numeric(result$main.cost.value)-as.numeric(result$lastest.value)>0 & result$lastest.value>0),c("code", "main.cost.value","lastest.value")]
+##############################################
+library(rjson)
+library(RCurl)
+library(XML)  
+gc()
+starttime <- Sys.time()
+
+d <- debugGatherer()
+stocks <- paste(recommend[1:nrow(recommend), "code"], collapse = ",")
+stockurl <- paste("http://data.10jqka.com.cn/ajax/stockpick.php?code=", stocks, sep="")  
+jsonData <- fromJSON(getURL(stockurl, .opts = list(debugfunction=d$update, verbose = TRUE)))
+jsonData
+###############################
